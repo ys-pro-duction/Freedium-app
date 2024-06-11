@@ -104,7 +104,6 @@ class MyForegroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        println("##################### destoy service")
         notificationManager?.cancelAll()
         stopSelf()
     }

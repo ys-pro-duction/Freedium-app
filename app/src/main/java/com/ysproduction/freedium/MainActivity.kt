@@ -1,25 +1,32 @@
 package com.ysproduction.freedium
 
+import android.Manifest.permission.POST_NOTIFICATIONS
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewClientCompat
 import com.google.android.material.progressindicator.LinearProgressIndicator
-import android.Manifest.permission.POST_NOTIFICATIONS
-import android.os.Build
 
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
-    val appLinkIntent: Intent by lazy { intent }
-    val appLinkAction: String? by lazy { appLinkIntent.action }
-    val appLinkData: Uri? by lazy { appLinkIntent.data }
+    private val appLinkIntent: Intent by lazy { intent }
+    private val appLinkAction: String? by lazy { appLinkIntent.action }
+    private val appLinkData: Uri? by lazy { appLinkIntent.data }
+    private val clipUrl by lazy {
+        val urls = extractUrls(intent.clipData.toString())
+        if (urls.isNotEmpty()) {
+            return@lazy urls[0]
+        } else return@lazy null
+
+    }
     private var isServiceRunning = false
     private val myForegroundService by lazy { MyForegroundService() }
 
@@ -28,14 +35,18 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         webView = findViewById<WebView>(R.id.main)
+
         val progressBar = findViewById<LinearProgressIndicator>(R.id.progressBar)
-        var url: String? = null
-        if (appLinkData == null) {
-            url = getSharedPreferences("URL", MODE_PRIVATE).getString("URL", null)
+        val url: String? = if (appLinkData == null) {
+            if (clipUrl == null) {
+                getSharedPreferences("URL", MODE_PRIVATE).getString("URL", null)
+            } else {
+                clipUrl.toString()
+            }
         } else {
-            url = appLinkData.toString()
-            getSharedPreferences("URL", MODE_PRIVATE).edit().putString("URL", url).apply()
+            appLinkData.toString()
         }
+        getSharedPreferences("URL", MODE_PRIVATE).edit().putString("URL", url).apply()
         webView.settings.javaScriptEnabled = true
 
         val cookieManager = CookieManager.getInstance()
@@ -78,11 +89,22 @@ class MainActivity : AppCompatActivity() {
         } else oldUrl
     }
 
-    fun decodeUrl(oldUrl: String): String {
+    private fun decodeUrl(oldUrl: String): String {
         return oldUrl.replace("%3A", ":")
             .replace("%2F", "/")
             .replace("%24", "$")
             .replace("%7E", "~")
+    }
+
+    private fun extractUrls(text: String): List<String> {
+        val urlRegex = "(?:^|[\\W])((ht|f)tp(s?):\\/\\/|www\\.)" +
+                "[-a-zA-Z0-9+&@#/%?=~_|!:,.;]*[-a-zA-Z0-9+&@#/%=~_|]"
+        val urlMatcher = Regex(urlRegex, RegexOption.MULTILINE).toPattern().matcher(text)
+        val urls = mutableListOf<String>()
+        while (urlMatcher.find()) {
+            urls.add(urlMatcher.group(0))
+        }
+        return urls
     }
 
     override fun onBackPressed() {

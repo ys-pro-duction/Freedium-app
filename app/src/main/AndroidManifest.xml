@@ -31,6 +31,17 @@
                 <data android:host="*" />
             </intent-filter>
 
+            <intent-filter>
+                <data android:scheme="medium" android:host="susi-activity" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
         <service
             android:name=".MyForegroundService"
